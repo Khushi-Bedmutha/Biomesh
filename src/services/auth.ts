@@ -6,20 +6,25 @@ export interface LoginData {
 }
 
 export interface RegisterData {
+  institutionName: string;
+  institutionType: 'hospital' | 'clinic' | 'research_center' | 'university' | 'pharma_company' | 'other';
   email: string;
   password: string;
+  registrationNumber: string;
+  contacts: {
+    name: string;
+    position: string;
+    email: string;
+    phone: string;
+  }[];
 }
+
 
 export interface AuthResponse {
   token: string;
   user: {
     id: string;
     email: string;
-    dataConsent: {
-      clinicalResearch: boolean;
-      aiTraining: boolean;
-      anonymousStatistics: boolean;
-    };
     role: string;
   };
 }

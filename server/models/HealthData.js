@@ -18,6 +18,14 @@ const healthDataSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     required: true
   },
+  source: {
+    type: String,
+    required: true
+  },
+  diseaseType:{
+    type: String,
+    required: true
+  },
   permissions: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

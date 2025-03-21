@@ -1,11 +1,19 @@
 import React, { useState } from "react";
 import { Brain, Bell, Upload, Search, Guitar as Hospital, Heart, Activity, FileText, Lock, Wallet, FlaskRound as Flask, BarChart, ChevronRight, Settings, LogOut, AlertCircle, MessageCircle, X, Send, Paperclip, Brain as BrainIcon } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
-import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
     const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
+
+    const handleLogout = () => {
+        // Clear user session or authentication data if stored
+        localStorage.removeItem('token'); // Example: Remove authentication token
+        sessionStorage.removeItem('token'); // Example: Remove session data
+    
+        // Redirect to the login page after logging out
+        navigate('/');
+      };
 
     return (
         <nav className="bg-white shadow-sm fixed w-full z-50">
@@ -59,8 +67,8 @@ const Navbar = () => {
                             <Settings className="h-6 w-6 text-gray-600" />
                         </button>
 
-                        <button className="p-2 rounded-full hover:bg-gray-100">
-                            <LogOut className="h-6 w-6 text-gray-600" />
+                        <button className="p-2 rounded-full hover:bg-gray-100" onClick={handleLogout}>
+                            <LogOut className="h-6 w-6 text-gray-600" onClick={handleLogout} />
                         </button>
                     </div>
                 </div>

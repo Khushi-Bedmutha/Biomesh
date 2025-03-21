@@ -2,6 +2,17 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
+  // Institution information instead of individual user
+  institutionName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  institutionType: {
+    type: String,
+    enum: ['hospital', 'clinic', 'research_center', 'university', 'pharma_company', 'other'],
+    required: true
+  },
   email: {
     type: String,
     required: true,
@@ -13,15 +24,36 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Verification status for institution
+  verificationStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'rejected'],
+    default: 'verified'
+  },
+  // Institution details
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    country: String,
+    postalCode: String
+  },
+  registrationNumber: {
+    type: String,
+    unique: true
+  },
+  // Contact people at the institution
+  contacts: [{
+    name: String,
+    position: String,
+    email: String,
+    phone: String
+  }],
+  // Blockchain integration
   walletAddress: {
     type: String,
     required: true,
-    unique: true
-  },
-  dataConsent: {
-    type: [String],
-    enum: ['clinicalResearch', 'aiTraining'],
-    default: []
+    // unique: true
   },
   publicKey: {
     type: String,
@@ -30,11 +62,12 @@ const userSchema = new mongoose.Schema({
   blockchainIdentity: {
     identityId: String,
     network: String
-  },
-  role: {
-    type: String,
-    enum: ['user', 'data_provider', 'researcher', 'admin'],
-    default: 'user'
+  },  
+  // Compliance tracking
+  compliance: {
+    hipaaCompliant: Boolean,
+    gdprCompliant: Boolean,
+    dpdpact: Boolean,
   }
 }, {
   timestamps: true

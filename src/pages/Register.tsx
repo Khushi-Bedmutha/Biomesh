@@ -1,191 +1,233 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Brain, Lock, Mail } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, MapPin, ShieldCheck, CrossIcon, DeleteIcon, Trash } from 'lucide-react';
 import { register } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 
-const Register = () => {
+export default function Register() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const [formData, setFormData] = useState({
+    institutionName: '',
+    institutionType: 'hospital',
     email: '',
     password: '',
     confirmPassword: '',
+    registrationNumber: '',
+    contacts: [{ name: '', position: '', email: '', phone: '' }],
+    address: '',
+    walletAddress: '',
+    publicKey: ''
   });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  const fadeInUp = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value
+    });
   };
+
+  const handleContactChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const newContacts = [...formData.contacts];
+    newContacts[index] = {
+      ...newContacts[index],
+      [e.target.name]: e.target.value
+    };
+    setFormData({ ...formData, contacts: newContacts });
+  };
+
+  const addContact = () => {
+    setFormData({
+      ...formData,
+      contacts: [...formData.contacts, { name: '', position: '', email: '', phone: '' }]
+    });
+  };
+
+  const deleteContact = (index: number) => {
+    setFormData({
+      ...formData,
+      contacts: formData.contacts.filter((_, i) => i !== index)
+    });
+  };
+
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      alert('Passwords do not match');
       return;
     }
 
-    setLoading(true);
-
     try {
       const response = await register({
+        institutionName: formData.institutionName,
+        institutionType: formData.institutionType,
         email: formData.email,
         password: formData.password,
-      });
-      
+        confirmPassword: formData.confirmPassword,
+        registrationNumber: formData.registrationNumber,
+        contacts: formData.contacts,
+        address: formData.address,
+        
+      })
       localStorage.setItem('token', response.token);
       setUser(response.user);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred during registration');
-    } finally {
-      setLoading(false);
+      console.log("Error during registration: ", err);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    // TODO: Integrate with API
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-      <motion.div 
-        className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl"
-        initial="initial"
-        animate="animate"
-        variants={fadeInUp}
-      >
-        <div className="text-center">
-          <div className="flex justify-center">
-            <Brain className="h-12 w-12 text-blue-600" />
-          </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Join BioMesh
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Start earning from your health data while advancing medical research
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4">
+      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
+        <div className="text-center mb-8">
+          <Building2 className="h-12 w-12 text-blue-600 mx-auto" />
+          <h2 className="text-3xl font-bold text-gray-900">Institution Registration</h2>
+          <p className="text-gray-600 mt-2">Create an account for your institution</p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm text-center">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="you@example.com"
-                />
-                <Mail className="h-5 w-5 text-gray-400 absolute right-3 top-3.5" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="••••••••"
-                />
-                <Lock className="h-5 w-5 text-gray-400 absolute right-3 top-3.5" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="••••••••"
-                />
-                <Lock className="h-5 w-5 text-gray-400 absolute right-3 top-3.5" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Institution Name</label>
             <input
-              id="terms"
-              name="terms"
-              type="checkbox"
+              id="institutionName"
+              type="text"
+              value={formData.institutionName}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
               required
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-              I agree to the{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">
-                Terms of Service
-              </a>
-              {' '}and{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">
-                Privacy Policy
-              </a>
-            </label>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Creating account...' : 'Create Account'}
-          </button>
-
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign in
-              </Link>
-            </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Institution Type</label>
+            <select
+              id="institutionType"
+              value={formData.institutionType}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+            >
+              <option value="hospital">Hospital</option>
+              <option value="clinic">Clinic</option>
+              <option value="research_center">Research Center</option>
+              <option value="university">University</option>
+              <option value="pharma_company">Pharmaceutical Company</option>
+              <option value="other">Other</option>
+            </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email Address</label>
+            <input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Registration Number</label>
+            <input
+              id="registrationNumber"
+              type="text"
+              value={formData.registrationNumber}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+
+
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">Contact Information</label>
+            {formData.contacts.map((contact, index) => (
+              <div className=' flex flex-row justify-center items-center'>
+                <div onClick={() => deleteContact(index)} className='m-3'>
+                  <Trash className='color-red' />
+                </div>
+                <div key={index} className="grid grid-cols-4 gap-4">
+
+                  <input
+                    name="name"
+                    type="text"
+                    placeholder="Name"
+                    value={contact.name}
+                    onChange={(e) => handleContactChange(index, e)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                  <input
+                    name="position"
+                    type="text"
+                    placeholder="Position"
+                    value={contact.position}
+                    onChange={(e) => handleContactChange(index, e)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="Email"
+                    value={contact.email}
+                    onChange={(e) => handleContactChange(index, e)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                  <input
+                    name="phone"
+                    type="tel"
+                    placeholder="Phone"
+                    value={contact.phone}
+                    onChange={(e) => handleContactChange(index, e)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={addContact} className="text-blue-600">+ Add Contact</button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <div className="relative">
+              <input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                required
+              />
+              <Lock className="absolute right-3 top-3 text-gray-400" size={18} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
+            <div className="relative">
+              <input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                required
+              />
+              <ShieldCheck className="absolute right-3 top-3 text-gray-400" size={18} />
+            </div>
+            {formData.password !== formData.confirmPassword && formData.confirmPassword.length > 0 && (
+              <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+            )}
+          </div>
+          <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg">Create Account</button>
         </form>
-      </motion.div>
+      </div>
     </div>
   );
-};
-
-export default Register;
+}

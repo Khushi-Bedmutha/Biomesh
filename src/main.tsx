@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import App from './App.tsx';
 import Login from './pages/Login.tsx';
@@ -10,6 +10,10 @@ import ClinicalTrials from './pages/ClinicalTrials.tsx';
 import Wallet from './pages/Wallet.tsx';
 import './index.css';
 import UploadHealthData from './pages/UploadHealthData.tsx';
+import HospitalDashboard from './pages/hospital/HospitalDashboard.tsx';
+import HospitalLogin from './pages/hospital/HospitalLogin.tsx';
+import HospitalRegister from './pages/hospital/HospitalRegister.tsx';
+import Marketplace from './pages/marketplace.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -22,7 +26,10 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clinical-trials" element={<ClinicalTrials />} />
           <Route path="/wallet" element={<Wallet />} />
+          <Route path="/marketplace" element={<Marketplace />} />
+
           <Route path="/upload-health-data" element={<UploadHealthData/>}/>
+
         </Routes>
       </Router>
     </AuthProvider>

@@ -299,9 +299,9 @@ function App() {
 
           <div className="mt-16 grid grid-cols-2 gap-8 md:grid-cols-4">
             {[
-              { icon: <Hospital className="h-12 w-12" />, name: "Mayo Clinic" },
+              { icon: <Building2 className="h-12 w-12" />, name: "Mayo Clinic" },
               { icon: <Building2 className="h-12 w-12" />, name: "Stanford Health" },
-              { icon: <Hospital className="h-12 w-12" />, name: "Johns Hopkins" },
+              { icon: <Building2 className="h-12 w-12" />, name: "Johns Hopkins" },
               { icon: <Building2 className="h-12 w-12" />, name: "Cleveland Clinic" }
             ].map((partner, index) => (
               <motion.div

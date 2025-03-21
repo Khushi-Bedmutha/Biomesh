@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import CountUp from 'react-countup';
-import { Brain, Bell, Upload, Search, Guitar as Hospital, Heart, Activity, FileText, Lock, Wallet, FlaskRound as Flask, BarChart, ChevronRight, Settings, LogOut, AlertCircle, MessageCircle, X, Send, Paperclip, Brain as BrainIcon } from 'lucide-react';
-import Navbar from './navbar';
+import { Brain, Bell, Upload, Search, FlaskConical as Hospital, Heart, Activity, FileText, Lock, Wallet, FlaskRound as Flask, BarChart, ChevronRight, Settings, LogOut, AlertCircle, MessageCircle, X, Send, Paperclip, Brain as BrainIcon, SearchIcon } from 'lucide-react';
+import Navbar from './Navbar';
+import RequestList from '../components/RequestList';
+import TransactionList from '../components/TransactionList';
+
 const Dashboard = () => {
   const [showChat, setShowChat] = useState(false);
   const [activeChat, setActiveChat] = useState('Pharma Inc.');
@@ -70,6 +72,22 @@ const Dashboard = () => {
       <div className="pt-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <motion.div
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+            className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border border-gray-100"
+          >
+            <div className="flex items-center" onClick={() => navigate('/marketplace')}>
+              <div className="bg-blue-100 rounded-lg p-3">
+                <SearchIcon className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Browse Data</h3>
+                <p className="text-sm text-gray-500">Browse throught the available data</p>
+              </div>
+            </div>
+          </motion.div>
           <motion.div
             variants={fadeInUp}
             initial="initial"
@@ -81,29 +99,13 @@ const Dashboard = () => {
                 <Upload className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Upload Health Data</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Upload Health Dataset</h3>
                 <p className="text-sm text-gray-500">Share medical records securely</p>
               </div>
             </div>
           </motion.div>
 
-          <motion.div
-            variants={fadeInUp}
-            initial="initial"
-            animate="animate"
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer border border-gray-100"
-          >
-            <div className="flex items-center">
-              <div className="bg-purple-100 rounded-lg p-3">
-                <Search className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">View AI Insights</h3>
-                <p className="text-sm text-gray-500">Personalized health analysis</p>
-              </div>
-            </div>
-          </motion.div>
+          
 
           <motion.div
             variants={fadeInUp}
@@ -125,114 +127,11 @@ const Dashboard = () => {
           </motion.div>
         </div>
 
-        {/* AI Insights Panel */}
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <motion.div
-              variants={fadeInUp}
-              initial="initial"
-              animate="animate"
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-            >
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">AI Health Insights</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="bg-red-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Heart className="h-5 w-5 text-red-500 mr-2" />
-                      <span className="text-red-700 font-medium">Heart Risk</span>
-                    </div>
-                    <span className="text-2xl font-bold text-red-700">
-                      <CountUp end={80} suffix="%" duration={2} />
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 bg-red-200 rounded-full">
-                    <div className="h-2 bg-red-500 rounded-full" style={{ width: '80%' }} />
-                  </div>
-                </div>
-
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Activity className="h-5 w-5 text-orange-500 mr-2" />
-                      <span className="text-orange-700 font-medium">Diabetes Risk</span>
-                    </div>
-                    <span className="text-2xl font-bold text-orange-700">
-                      <CountUp end={25} suffix="%" duration={2} />
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 bg-orange-200 rounded-full">
-                    <div className="h-2 bg-orange-500 rounded-full" style={{ width: '25%' }} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent AI Reports</h3>
-                <div className="space-y-4">
-                  {[
-                    { title: "Monthly Health Summary", date: "Mar 15, 2025" },
-                    { title: "Genetic Analysis Report", date: "Mar 10, 2025" },
-                    { title: "Lifestyle Recommendations", date: "Mar 5, 2025" }
-                  ].map((report, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-blue-500 mr-3" />
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900">{report.title}</h4>
-                          <p className="text-xs text-gray-500">{report.date}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          <motion.div
-            variants={fadeInUp}
-            initial="initial"
-            animate="animate"
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-          >
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Data Sharing Controls</h2>
-            <div className="space-y-4">
-              {[
-                { title: "Clinical Research", icon: Flask, enabled: true },
-                { title: "AI Training", icon: Brain, enabled: true },
-                { title: "Anonymous Statistics", icon: BarChart, enabled: false }
-              ].map((control, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center">
-                    <control.icon className="h-5 w-5 text-blue-500 mr-3" />
-                    <span className="text-sm font-medium text-gray-900">{control.title}</span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked={control.enabled} />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Earnings Overview</h3>
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-green-700">Total Earnings</span>
-                  <span className="text-2xl font-bold text-green-700">150 BMT</span>
-                </div>
-                <button className="w-full mt-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors">
-                  Withdraw Tokens
-                </button>
-              </div>
-            </div>
-          </motion.div>
+        
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <RequestList />
+          <TransactionList />
         </div>
-
         {/* Bottom Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 mb-8">
           <motion.div

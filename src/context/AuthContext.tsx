@@ -4,12 +4,6 @@ import { getMe } from '../services/auth';
 interface User {
   id: string;
   email: string;
-  dataConsent: {
-    clinicalResearch: boolean;
-    aiTraining: boolean;
-    anonymousStatistics: boolean;
-  };
-  role: string;
 }
 
 interface AuthContextType {
@@ -35,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
+      console.log("token: ", token);
       if (token) {
         try {
           const userData = await getMe();

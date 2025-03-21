@@ -24,7 +24,8 @@ app.use(compression());
 app.use(morgan('dev'));
 
 // MongoDB Connection
-mongoose.connect('mongodb+srv://dbadmin:admin%402407@cluster0.9xgro.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+// mongoose.connect('mongodb+srv://dbadmin:admin%402407@cluster0.9xgro.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+mongoose.connect('mongodb://dbadmin:admin%402407@cluster0-shard-00-00.9xgro.mongodb.net:27017,cluster0-shard-00-01.9xgro.mongodb.net:27017,cluster0-shard-00-02.9xgro.mongodb.net:27017/?ssl=true&replicaSet=atlas-a0nysi-shard-0&authSource=admin&retryWrites=true&w=majority')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
