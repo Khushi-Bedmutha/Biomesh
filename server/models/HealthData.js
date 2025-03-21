@@ -23,6 +23,10 @@ const healthDataSchema = new mongoose.Schema({
     required: true
   },
   diseaseType:{
+    type: mongoose.Schema.Types.Mixed,
+    required: true
+  },
+  description:{
     type: String,
     required: true
   },

@@ -35,13 +35,11 @@ export const createDataRequest = async (req, res) => {
       complianceVerification
     } = req.body;
     
-    // Verify provider institution exists
     const provider = await User.findById(providerId);
     if (!provider) {
       return res.status(404).json({ message: 'Provider institution not found' });
     }
     
-    // Create new data request
     const dataRequest = await DataRequest.create({
       requester: req.user._id,
       provider: providerId,

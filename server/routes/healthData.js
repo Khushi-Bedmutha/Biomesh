@@ -36,7 +36,7 @@ router.post('/', protect, [
     console.log('Data to upload:', {
       dataType: req.body.dataType,
       source: req.body.source,
-      data: req.body.data,
+      // data: req.body.data,
       diseaseType: req.body.diseaseType,
       hash: req.body.hash
     });

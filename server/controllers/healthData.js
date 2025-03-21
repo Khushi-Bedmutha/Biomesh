@@ -8,13 +8,13 @@ export const uploadHealthData = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { dataType, source, data, diseaseType,description, encryption, hash, smartContractId } = req.body;
+    const { dataType, source, diseaseType,description, encryption, hash, smartContractId } = req.body;
 
     const healthData = await HealthData.create({
       user: req.user._id,
       dataType,
       source,
-      data,
+      // data,
       diseaseType,
       description,
       encryption,

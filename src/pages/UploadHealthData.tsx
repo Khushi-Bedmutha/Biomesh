@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../client/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import axios from 'axios';
 
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 
@@ -15,12 +14,14 @@ interface FileData {
     status: UploadStatus;
     progress: number;
     diseaseType: string | null;
+    publicUrl?: string;
 }
 
 interface HealthData {
     type: string | null;
     description: string;
-    files: FileData[];
+    diseaseType: string[];
+    hash: string | null;
 }
 
 const diseaseOptions = [
@@ -40,28 +41,31 @@ const UploadHealth = () => {
     const [healthData, setHealthData] = useState<HealthData>({
         type: null,
         description: '',
-        files: []
+        diseaseType: [],
+        hash: null,
     });
     const [dragActive, setDragActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [datasetDescription, setDatasetDescription] = useState<string>('');
+    const [files, setFiles] = useState<FileData[]>([]);
 
     useEffect(() => {
         if (!user) {
             setError('You need to be logged in to upload dataset.');
-            console.log("user: ", user);
+            console.log("Not Authenticated.");
         } else {
-            console.log("Not Authenticated.")
+            setError(null);
+            console.log("Authenticated: ", user);
         }
     }, [user]);
 
     const dataTypes = [
-        { id: 'medical_records', name: 'Medical Records', icon: FileText, description: 'Upload medical history, lab results, or doctor\'s notes', reward: '50 BMT' },
-        { id: 'fitness', name: 'Fitness Data', icon: Activity, description: 'Share workout data, steps, and physical activity', reward: '30 BMT' },
-        { id: 'genetic', name: 'Genetic Data', icon: Dna, description: 'DNA test results and genetic information', reward: '100 BMT' },
-        { id: 'wearable', name: 'Wearable Data', icon: Watch, description: 'Data from smartwatches and health monitoring devices', reward: '35 BMT' },
-        { id: 'mental', name: 'Mental Health', icon: Brain, description: 'Mental health assessments and records', reward: '45 BMT' },
-        { id: 'lab_result', name: 'Lab Results', icon: FlaskRound, description: 'Laboratory test results, medical screenings, and diagnostic reports', reward: '80 BMT' }
+        { id: 'medical_records', name: 'Medical Records', icon: FileText, description: 'Upload medical history, lab results, or doctor\'s notes'},
+        { id: 'fitness', name: 'Fitness Data', icon: Activity, description: 'Share workout data, steps, and physical activity'},
+        { id: 'genetic', name: 'Genetic Data', icon: Dna, description: 'DNA test results and genetic information' },
+        { id: 'wearable', name: 'Wearable Data', icon: Watch, description: 'Data from smartwatches and health monitoring devices' },
+        { id: 'mental', name: 'Mental Health', icon: Brain, description: 'Mental health assessments and records' },
+        { id: 'lab_result', name: 'Lab Results', icon: FlaskRound, description: 'Laboratory test results, medical screenings, and diagnostic reports' }
     ];
 
     const handleDrag = useCallback((e: React.DragEvent) => {
@@ -79,26 +83,19 @@ const UploadHealth = () => {
         e.stopPropagation();
         setDragActive(false);
 
-        const files = Array.from(e.dataTransfer.files);
-        processFiles(files);
+        const droppedFiles = Array.from(e.dataTransfer.files);
+        processFiles(droppedFiles);
     }, []);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const files = Array.from(e.target.files);
-            processFiles(files);
+            const selectedFiles = Array.from(e.target.files);
+            processFiles(selectedFiles);
         }
     };
 
-    const updateDescription = (description: string) => {
-        setHealthData(prev => ({
-            ...prev,
-            description
-        }));
-    };
-
-    const processFiles = (files: File[]) => {
-        const newFiles = files.map(file => ({
+    const processFiles = (newFiles: File[]) => {
+        const processedFiles = newFiles.map(file => ({
             id: Math.random().toString(36).substr(2, 9),
             file,
             status: 'idle' as UploadStatus,
@@ -106,29 +103,29 @@ const UploadHealth = () => {
             diseaseType: null,
         }));
 
-        setHealthData(prev => ({
-            ...prev,
-            files: [...prev.files, ...newFiles]
-        }));
+        setFiles(prev => [...prev, ...processedFiles]);
     };
 
     const uploadFile = async (fileId: string) => {
-        const fileIndex = healthData.files.findIndex(f => f.id === fileId);
+        const fileIndex = files.findIndex(f => f.id === fileId);
         if (fileIndex === -1) return;
 
-        const fileData = healthData.files[fileIndex];
-
+        const fileData = files[fileIndex];
+        
         // Update file status to uploading
-        setHealthData(prev => ({
-            ...prev,
-            files: prev.files.map(f => 
-                f.id === fileId ? { ...f, status: 'uploading' } : f
+        setFiles(prev => 
+            prev.map(f => 
+                f.id === fileId ? { ...f, status: 'uploading', progress: 10 } : f
             )
-        }));
-
+        );
+        
         try {
-            const fileName = `${user?.id}/${healthData.type}/${fileData.file.name}`;
-            const { data: uploadData, error } = await supabase
+            if (!user || !healthData.type) {
+                throw new Error("Missing user ID or data type");
+            }
+            
+            const fileName = `${user.id}/${healthData.type}/${fileData.file.name}`;
+            const { data: uploadData, error: uploadError } = await supabase
                 .storage
                 .from('health-data')
                 .upload(fileName, fileData.file, {
@@ -136,55 +133,68 @@ const UploadHealth = () => {
                     upsert: false
                 });
 
-            if (error) {
-                throw error;
+            if (uploadError) {
+                throw uploadError;
             }
+
+            // Update progress
+            setFiles(prev => 
+                prev.map(f => 
+                    f.id === fileId ? { ...f, progress: 50 } : f
+                )
+            );
 
             const { data: { publicUrl } } = supabase.storage.from('health-data').getPublicUrl(fileName);
 
+            // Now submit metadata to your API
             await api.post('/health-data', {
                 dataType: healthData.type,
-                source: user?.id,
-                data: publicUrl,
+                source: user.id,
                 diseaseType: fileData.diseaseType || 'Unknown',
+                fileName: fileData.file.name,
+                fileSize: fileData.file.size,
+                fileType: fileData.file.type,
                 description: healthData.description,
-                datasetDescription: datasetDescription, // Send dataset description to backend
-                hash: Math.random().toString(36).substring(7)
+                datasetDescription: datasetDescription,
+                url: publicUrl, // Store the reference, not the file itself
+                hash: Math.random().toString(36).substring(7) // Consider using a proper hash function in production
             });
 
             // Update file status to success
-            setHealthData(prev => ({
-                ...prev,
-                files: prev.files.map(f => 
-                    f.id === fileId ? { ...f, status: 'success', progress: 100 } : f
+            setFiles(prev => 
+                prev.map(f => 
+                    f.id === fileId ? { ...f, status: 'success', progress: 100, publicUrl } : f
                 )
-            }));
+            );
 
         } catch (error) {
+            console.error("Error uploading file:", error);
             // Update file status to error
-            setHealthData(prev => ({
-                ...prev,
-                files: prev.files.map(f => 
+            setFiles(prev => 
+                prev.map(f => 
                     f.id === fileId ? { ...f, status: 'error', progress: 0 } : f
                 )
-            }));
+            );
+        }
+    };
+
+    const handleSubmitAll = async () => {
+        const pendingFiles = files.filter(f => f.status === 'idle');
+        for (const fileData of pendingFiles) {
+            await uploadFile(fileData.id);
         }
     };
 
     const updateDiseaseType = (fileId: string, disease: string) => {
-        setHealthData(prev => ({
-            ...prev,
-            files: prev.files.map(f => 
+        setFiles(prev => 
+            prev.map(f => 
                 f.id === fileId ? { ...f, diseaseType: disease } : f
             )
-        }));
+        );
     };
 
     const removeFile = (fileId: string) => {
-        setHealthData(prev => ({
-            ...prev,
-            files: prev.files.filter(f => f.id !== fileId)
-        }));
+        setFiles(prev => prev.filter(f => f.id !== fileId));
     };
 
     const setSelectedType = (type: string) => {
@@ -224,6 +234,12 @@ const UploadHealth = () => {
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">Upload Health Dataset</h1>
                 </div>
 
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                        {error}
+                    </div>
+                )}
+
                 {/* Data Type Selection */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                     {dataTypes.map(type => (
@@ -242,7 +258,6 @@ const UploadHealth = () => {
                                 </div>
                                 <div className="ml-4">
                                     <h3 className="font-semibold text-gray-900">{type.name}</h3>
-                                    <span className="text-sm text-green-600 font-medium">Earn {type.reward}</span>
                                 </div>
                             </div>
                             <p className="text-sm text-gray-600">{type.description}</p>
@@ -305,9 +320,8 @@ const UploadHealth = () => {
                     </div>
                 </div>
                 
-                
                 <AnimatePresence>
-                    {healthData.files.length > 0 && (
+                    {files.length > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -318,27 +332,13 @@ const UploadHealth = () => {
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-xl font-semibold text-gray-900">Selected Files</h3>
                                     <span className="text-sm text-gray-600">
-                                        {healthData.files.length} file{healthData.files.length !== 1 ? 's' : ''} selected
+                                        {files.length} file{files.length !== 1 ? 's' : ''} selected
                                     </span>
                                 </div>
                             </div>
                             <div className="divide-y divide-gray-200">
-
-                                {healthData.files.map((fileData) => (
-
+                                {files.map((fileData) => (
                                     <div key={fileData.id} className="p-6">
-                                        <select
-                                            value={fileData.diseaseType || ''}
-                                            onChange={(e) => updateDiseaseType(fileData.id, e.target.value)}
-                                            className="text-sm border border-gray-300 rounded-lg px-4 py-2"
-                                        >
-                                            <option value="">Select Disease/Diagnosis</option>
-                                            {diseaseOptions.map((disease, idx) => (
-                                                <option key={idx} value={disease}>
-                                                    {disease}
-                                                </option>
-                                            ))}
-                                        </select>
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center">
                                                 <FileCheck className="h-6 w-6 text-gray-400 mr-3" />
@@ -357,9 +357,25 @@ const UploadHealth = () => {
                                             </button>
                                         </div>
 
+                                        <div className="mb-4">
+                                            <select
+                                                value={fileData.diseaseType || ''}
+                                                onChange={(e) => updateDiseaseType(fileData.id, e.target.value)}
+                                                className="text-sm border border-gray-300 rounded-lg px-4 py-2 w-full md:w-auto"
+                                            >
+                                                <option value="">Select Disease/Diagnosis</option>
+                                                {diseaseOptions.map((disease, idx) => (
+                                                    <option key={idx} value={disease}>
+                                                        {disease}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
                                         <div className="flex items-center space-x-6 mb-4">
                                             <span className="text-sm text-green-600 font-medium">
-                                                Earn {dataTypes.find(t => t.id === healthData.type)?.reward}
+                                                {/* Earn {dataTypes.find(t => t.id === healthData.type)?.reward} */}
+                                                Earn 150 BMT
                                             </span>
                                         </div>
 
@@ -406,7 +422,17 @@ const UploadHealth = () => {
                     )}
                 </AnimatePresence>
 
-
+                {files.length > 0 && files.some(f => f.status === 'idle') && (
+                    <div className='flex flex-col items-center'>
+                        <button 
+                            onClick={handleSubmitAll}
+                            className='m-4 bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors'
+                        >
+                            Upload All Files
+                        </button>
+                    </div>
+                )}
+                
                 {/* Privacy Notice */}
                 <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
                     {[

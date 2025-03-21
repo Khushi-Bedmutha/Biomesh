@@ -1,6 +1,7 @@
 import React from 'react';
 import { Transaction } from '../types';
 import { CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const transactions: Transaction[] = [
   {
@@ -19,6 +20,8 @@ const transactions: Transaction[] = [
 
 
 export default function TransactionList() {
+const navigate = useNavigate();
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-6">
@@ -38,6 +41,15 @@ export default function TransactionList() {
           ))}
         </div>
       </div>
+      <div className="flex flex-col items-center">
+  <button
+    onClick={() => navigate("/wallet")}
+    className="m-4 bg-blue-600 text-white px-6 py-3 rounded-xl text-base font-semibold shadow-md hover:bg-blue-700 active:scale-95 transition-all duration-200 ease-in-out"
+  >
+    Manage Requests
+  </button>
+</div>
+
     </div>
   );
 }
