@@ -1,11 +1,27 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Brain, Bell, Upload, Search, Guitar as Hospital, Heart, Activity, FileText, Lock, Wallet, FlaskRound as Flask, BarChart, ChevronRight, Settings, LogOut, AlertCircle, MessageCircle, X, Send, Paperclip, Brain as BrainIcon } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
+import { walletApi } from "../services/api";
 
 const Navbar = () => {
     const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
-
+    const[walletBalance, setWalletBalance] = useState(0);
+    useEffect(() => {
+        const fetchData = async () => {
+          try {
+            
+            const balance = await walletApi.getBalance();
+            setWalletBalance(balance);
+            
+            
+          } catch (err) {
+            console.error('Error fetching wallet data:', err);
+          } 
+        };
+        
+        fetchData();
+      }, []);
     const handleLogout = () => {
         // Clear user session or authentication data if stored
         localStorage.removeItem('token'); // Example: Remove authentication token
@@ -30,7 +46,7 @@ const Navbar = () => {
                             className="bg-blue-50 px-4 py-2 rounded-lg flex items-center cursor-pointer hover:bg-blue-100 transition-colors"
                         >
                             <Wallet className="h-5 w-5 text-blue-600 mr-2" />
-                            <span className="text-blue-600 font-semibold">150 BMT</span>
+                            <span className="text-blue-600 font-semibold">{walletBalance} BMT</span>
                         </div>
 
                         <div className="relative">

@@ -6,7 +6,7 @@ import { supabase } from '../client/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
+type UploadStatus = 'idle' | 'processing' | 'uploading' | 'success' | 'error';
 
 interface FileData {
     id: string;
@@ -15,6 +15,7 @@ interface FileData {
     progress: number;
     diseaseType: string | null;
     publicUrl?: string;
+    processedData?: any; // To store the JSON response from FastAPI
 }
 
 interface HealthData {
@@ -35,6 +36,7 @@ const diseaseOptions = [
     'Other'
 ];
 
+
 const UploadHealth = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -48,7 +50,7 @@ const UploadHealth = () => {
     const [error, setError] = useState<string | null>(null);
     const [datasetDescription, setDatasetDescription] = useState<string>('');
     const [files, setFiles] = useState<FileData[]>([]);
-
+    
     useEffect(() => {
         if (!user) {
             setError('You need to be logged in to upload dataset.');
@@ -58,6 +60,21 @@ const UploadHealth = () => {
             console.log("Authenticated: ", user);
         }
     }, [user]);
+
+    // Process files through FastAPI when files are added
+    useEffect(() => {
+        const processPendingFiles = async () => {
+            const pendingFiles = files.filter(f => f.status === 'idle');
+            
+            for (const fileData of pendingFiles) {
+                await processFileWithFastAPI(fileData.id);
+            }
+        };
+        
+        if (files.some(f => f.status === 'idle')) {
+            processPendingFiles();
+        }
+    }, [files]);
 
     const dataTypes = [
         { id: 'medical_records', name: 'Medical Records', icon: FileText, description: 'Upload medical history, lab results, or doctor\'s notes'},
@@ -106,29 +123,91 @@ const UploadHealth = () => {
         setFiles(prev => [...prev, ...processedFiles]);
     };
 
-    const uploadFile = async (fileId: string) => {
+    // Process file through FastAPI
+    const processFileWithFastAPI = async (fileId: string) => {
         const fileIndex = files.findIndex(f => f.id === fileId);
         if (fileIndex === -1) return;
 
         const fileData = files[fileIndex];
         
-        // Update file status to uploading
+        // Update file status to processing
         setFiles(prev => 
             prev.map(f => 
-                f.id === fileId ? { ...f, status: 'uploading', progress: 10 } : f
+                f.id === fileId ? { ...f, status: 'processing', progress: 10 } : f
             )
         );
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', fileData.file);
+        
+            const response = await fetch('http://localhost:8000/upload', {
+                method: 'POST',
+                body: formData,
+            });
+        
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const processedData = await response.json();
+            
+            // Update file status with processed data and set to uploading
+            setFiles(prev => 
+                prev.map(f => 
+                    f.id === fileId ? { 
+                        ...f, 
+                        status: 'uploading', 
+                        progress: 50,
+                        processedData
+                    } : f
+                )
+            );
+            
+            // Automatically upload the processed data
+            await uploadProcessedData(fileId);
+            
+        } catch (error) {
+            console.error("Error processing file with FastAPI:", error);
+            // Update file status to error
+            setFiles(prev => 
+                prev.map(f => 
+                    f.id === fileId ? { ...f, status: 'error', progress: 0 } : f
+                )
+            );
+        }
+    };
+    
+    // Upload the processed JSON data
+    const uploadProcessedData = async (fileId: string) => {
+        const fileIndex = files.findIndex(f => f.id === fileId);
+        if (fileIndex === -1) return;
+
+        const fileData = files[fileIndex];
+        
+        if (!fileData.processedData) {
+            setFiles(prev => 
+                prev.map(f => 
+                    f.id === fileId ? { ...f, status: 'error', progress: 0 } : f
+                )
+            );
+            return;
+        }
         
         try {
             if (!user || !healthData.type) {
                 throw new Error("Missing user ID or data type");
             }
             
-            const fileName = `${user.id}/${healthData.type}/${fileData.file.name}`;
+            // Convert the processed data to a JSON blob
+            const jsonBlob = new Blob([JSON.stringify(fileData.processedData)], { type: 'application/json' });
+            const jsonFileName = `${fileData.file.name.split('.')[0]}_processed.json`;
+            
+            const fileName = `${user.id}/${healthData.type}/${jsonFileName}`;
             const { data: uploadData, error: uploadError } = await supabase
                 .storage
                 .from('health-data')
-                .upload(fileName, fileData.file, {
+                .upload(fileName, jsonBlob, {
                     cacheControl: '3600',
                     upsert: false
                 });
@@ -137,13 +216,7 @@ const UploadHealth = () => {
                 throw uploadError;
             }
 
-            // Update progress
-            setFiles(prev => 
-                prev.map(f => 
-                    f.id === fileId ? { ...f, progress: 50 } : f
-                )
-            );
-
+            // Get public URL of the uploaded file
             const { data: { publicUrl } } = supabase.storage.from('health-data').getPublicUrl(fileName);
 
             // Now submit metadata to your API
@@ -151,12 +224,12 @@ const UploadHealth = () => {
                 dataType: healthData.type,
                 source: user.id,
                 diseaseType: fileData.diseaseType || 'Unknown',
-                fileName: fileData.file.name,
-                fileSize: fileData.file.size,
-                fileType: fileData.file.type,
+                fileName: jsonFileName,
+                fileSize: jsonBlob.size,
+                fileType: 'application/json',
                 description: healthData.description,
                 datasetDescription: datasetDescription,
-                url: publicUrl, // Store the reference, not the file itself
+                url: publicUrl,
                 hash: Math.random().toString(36).substring(7) // Consider using a proper hash function in production
             });
 
@@ -168,7 +241,7 @@ const UploadHealth = () => {
             );
 
         } catch (error) {
-            console.error("Error uploading file:", error);
+            console.error("Error uploading processed data:", error);
             // Update file status to error
             setFiles(prev => 
                 prev.map(f => 
@@ -181,7 +254,7 @@ const UploadHealth = () => {
     const handleSubmitAll = async () => {
         const pendingFiles = files.filter(f => f.status === 'idle');
         for (const fileData of pendingFiles) {
-            await uploadFile(fileData.id);
+            await processFileWithFastAPI(fileData.id);
         }
     };
 
@@ -308,7 +381,7 @@ const UploadHealth = () => {
                         </h3>
                         <p className="text-gray-600 mb-6 max-w-md">
                             {healthData.type
-                                ? 'or click to select files from your computer'
+                                ? 'or click to select files from your computer. Files will be automatically processed and uploaded.'
                                 : 'Choose from the data types above to specify what kind of health data you\'re uploading'
                             }
                         </p>
@@ -352,6 +425,7 @@ const UploadHealth = () => {
                                             <button
                                                 onClick={() => removeFile(fileData.id)}
                                                 className="text-gray-400 hover:text-red-500 transition-colors"
+                                                disabled={fileData.status !== 'idle' && fileData.status !== 'error'}
                                             >
                                                 <X className="h-5 w-5" />
                                             </button>
@@ -362,6 +436,7 @@ const UploadHealth = () => {
                                                 value={fileData.diseaseType || ''}
                                                 onChange={(e) => updateDiseaseType(fileData.id, e.target.value)}
                                                 className="text-sm border border-gray-300 rounded-lg px-4 py-2 w-full md:w-auto"
+                                                disabled={fileData.status !== 'idle' && fileData.status !== 'error'}
                                             >
                                                 <option value="">Select Disease/Diagnosis</option>
                                                 {diseaseOptions.map((disease, idx) => (
@@ -374,7 +449,6 @@ const UploadHealth = () => {
 
                                         <div className="flex items-center space-x-6 mb-4">
                                             <span className="text-sm text-green-600 font-medium">
-                                                {/* Earn {dataTypes.find(t => t.id === healthData.type)?.reward} */}
                                                 Earn 150 BMT
                                             </span>
                                         </div>
@@ -388,14 +462,14 @@ const UploadHealth = () => {
                                                 />
                                             </div>
                                             {fileData.status === 'idle' && (
-                                                <button
-                                                    onClick={() => uploadFile(fileData.id)}
-                                                    className={`bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors ${!fileData.diseaseType ? 'bg-gray-400 cursor-not-allowed' : 'hover:bg-blue-700'
-                                                        }`}
-                                                    disabled={!fileData.diseaseType}
-                                                >
-                                                    Upload
-                                                </button>
+                                                <span className="text-sm text-gray-600 font-medium">
+                                                    Waiting to process...
+                                                </span>
+                                            )}
+                                            {fileData.status === 'processing' && (
+                                                <span className="text-sm text-blue-600 font-medium">
+                                                    Processing... {fileData.progress}%
+                                                </span>
                                             )}
                                             {fileData.status === 'uploading' && (
                                                 <span className="text-sm text-blue-600 font-medium">
@@ -411,7 +485,7 @@ const UploadHealth = () => {
                                             {fileData.status === 'error' && (
                                                 <span className="flex items-center text-red-600">
                                                     <AlertCircle className="h-5 w-5 mr-2" />
-                                                    Upload Failed
+                                                    {fileData.progress < 50 ? 'Processing Failed' : 'Upload Failed'}
                                                 </span>
                                             )}
                                         </div>
@@ -421,17 +495,6 @@ const UploadHealth = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                {files.length > 0 && files.some(f => f.status === 'idle') && (
-                    <div className='flex flex-col items-center'>
-                        <button 
-                            onClick={handleSubmitAll}
-                            className='m-4 bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors'
-                        >
-                            Upload All Files
-                        </button>
-                    </div>
-                )}
                 
                 {/* Privacy Notice */}
                 <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">

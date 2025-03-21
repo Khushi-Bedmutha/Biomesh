@@ -1,47 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Wallet as WalletIcon, ArrowDownToLine, ArrowUpFromLine, Clock, AlertCircle, ChevronDown, ExternalLink, History, CreditCard, Coins, Ban as Bank } from 'lucide-react';
 import CountUp from 'react-countup';
+import { walletApi, transactionsApi, Transaction } from '../services/api';
+import { toast } from 'react-toastify'; // Assuming you use react-toastify for notifications
 
 const Wallet = () => {
   const [selectedWithdrawMethod, setSelectedWithdrawMethod] = useState<string | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-
-  const transactions = [
-    {
-      id: 1,
-      type: 'credit',
-      amount: 250,
-      description: 'Clinical Trial Participation - Cancer Research Study',
-      date: '2025-03-15 14:30',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      type: 'credit',
-      amount: 100,
-      description: 'AI Data Contribution - Health Records Analysis',
-      date: '2025-03-14 09:15',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      type: 'debit',
-      amount: 500,
-      description: 'Withdrawal to USDT',
-      date: '2025-03-10 16:45',
-      status: 'completed'
-    },
-    {
-      id: 4,
-      type: 'credit',
-      amount: 300,
-      description: 'Research Data Sharing Reward',
-      date: '2025-03-05 11:20',
-      status: 'completed'
-    }
-  ];
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [withdrawalInProgress, setWithdrawalInProgress] = useState(false);
 
   const withdrawMethods = [
     {
@@ -70,10 +42,121 @@ const Wallet = () => {
     }
   ];
 
-  const handleWithdraw = () => {
-    // Handle withdrawal logic here
-    setShowWithdrawModal(false);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch wallet balance
+        const balance = await walletApi.getBalance();
+        setWalletBalance(balance);
+        
+        // Fetch transactions
+        const userTransactions = await transactionsApi.getAll();
+        setTransactions(userTransactions);
+        
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching wallet data:', err);
+        setError('Failed to load wallet data. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  const handleWithdraw = async () => {
+    if (!selectedWithdrawMethod || !withdrawAmount) {
+      toast.error('Please select a withdrawal method and enter an amount');
+      return;
+    }
+    
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    
+    const method = withdrawMethods.find(m => m.id === selectedWithdrawMethod);
+    if (!method) return;
+    
+    if (amount < method.minAmount) {
+      toast.error(`Minimum withdrawal amount is ${method.minAmount} BMT`);
+      return;
+    }
+    
+    if (amount > walletBalance) {
+      toast.error('Insufficient balance');
+      return;
+    }
+    
+    try {
+      setWithdrawalInProgress(true);
+      
+      // Generate a transaction hash
+      const transactionHash = walletApi.generateTransactionHash();
+      
+      // Process the withdrawal
+      const description = `Withdrawal to ${method.name}`;
+      const result = await walletApi.debit(amount, description, transactionHash);
+      
+      // Update local state
+      setWalletBalance(result.wallet.balance);
+      setTransactions(prev => [result.transaction, ...prev]);
+      
+      toast.success('Withdrawal initiated successfully');
+      setShowWithdrawModal(false);
+      setWithdrawAmount('');
+    } catch (err) {
+      console.error('Withdrawal error:', err);
+      toast.error('Failed to process withdrawal. Please try again.');
+    } finally {
+      setWithdrawalInProgress(false);
+    }
   };
+
+  // Format date to readable format
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading wallet data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-xl shadow-md max-w-md w-full">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-center mb-2">Error Loading Data</h2>
+          <p className="text-gray-600 text-center">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -97,19 +180,15 @@ const Wallet = () => {
           
           <div className="flex items-baseline">
             <span className="text-4xl font-bold">
-              <CountUp end={1500} duration={2} /> BMT
+              <CountUp end={walletBalance} duration={2} /> BMT
             </span>
-            <span className="ml-2 text-blue-200">≈ $1,500 USD</span>
+            <span className="ml-2 text-blue-200">≈ ${walletBalance} USD</span>
           </div>
           
           <div className="mt-4 flex space-x-4">
             <div className="flex items-center text-blue-200">
-              <ArrowUpFromLine className="h-5 w-5 mr-1" />
-              <span>+350 BMT this month</span>
-            </div>
-            <div className="flex items-center text-blue-200">
               <History className="h-5 w-5 mr-1" />
-              <span>4 transactions</span>
+              <span>{transactions.length} transactions</span>
             </div>
           </div>
         </motion.div>
@@ -122,45 +201,47 @@ const Wallet = () => {
             className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6"
           >
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Transaction History</h2>
-            <div className="space-y-4">
-              {transactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center">
-                    <div className={`p-2 rounded-lg ${
-                      transaction.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {transaction.type === 'credit' ? (
-                        <ArrowDownToLine className={`h-5 w-5 ${
-                          transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        }`} />
-                      ) : (
-                        <ArrowUpFromLine className={`h-5 w-5 ${
-                          transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        }`} />
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      <p className="font-medium text-gray-900">{transaction.description}</p>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {transaction.date}
+            {transactions.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction._id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <div className={`p-2 rounded-lg ${
+                        transaction.type === 'credit' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {transaction.type === 'credit' ? (
+                          <ArrowDownToLine className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <ArrowUpFromLine className="h-5 w-5 text-red-600" />
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        <p className="font-medium text-gray-900">{transaction.description}</p>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {formatDate(transaction.createdAt)}
+                        </div>
                       </div>
                     </div>
+                    <div className={`text-right ${
+                      transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      <p className="font-semibold">
+                        {transaction.type === 'credit' ? '+' : '-'}{transaction.amount} BMT
+                      </p>
+                      <p className="text-sm text-gray-500">{transaction.status}</p>
+                    </div>
                   </div>
-                  <div className={`text-right ${
-                    transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    <p className="font-semibold">
-                      {transaction.type === 'credit' ? '+' : '-'}{transaction.amount} BMT
-                    </p>
-                    <p className="text-sm text-gray-500">{transaction.status}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* Withdraw Options */}
@@ -179,6 +260,7 @@ const Wallet = () => {
                     setShowWithdrawModal(true);
                   }}
                   className="w-full p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center justify-between"
+                  disabled={walletBalance < method.minAmount}
                 >
                   <div className="flex items-center">
                     <div className="p-2 bg-blue-100 rounded-lg">
@@ -233,6 +315,9 @@ const Wallet = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter amount"
                 />
+                <p className="mt-1 text-sm text-gray-500">
+                  Available: {walletBalance} BMT
+                </p>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
@@ -255,14 +340,22 @@ const Wallet = () => {
               <button
                 onClick={() => setShowWithdrawModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={withdrawalInProgress}
               >
                 Cancel
               </button>
               <button
                 onClick={handleWithdraw}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={
+                  withdrawalInProgress || 
+                  !withdrawAmount || 
+                  parseFloat(withdrawAmount) <= 0 ||
+                  parseFloat(withdrawAmount) > walletBalance ||
+                  parseFloat(withdrawAmount) < (withdrawMethods.find(m => m.id === selectedWithdrawMethod)?.minAmount || 0)
+                }
               >
-                Confirm Withdrawal
+                {withdrawalInProgress ? 'Processing...' : 'Confirm Withdrawal'}
               </button>
             </div>
           </motion.div>

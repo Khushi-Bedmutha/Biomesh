@@ -3,6 +3,7 @@ import Transaction from '../models/Transaction.js';
 import Wallet from '../models/wallet.js';
 
 export const getWalletBalance = async (req, res) => {
+    console.log("Checking wallet balance")
   try {
     const wallet = await Wallet.findOne({ user: req.user._id });
 
