@@ -70,7 +70,6 @@ export default function Register() {
         registrationNumber: formData.registrationNumber,
         contacts: formData.contacts,
         address: formData.address,
-        
       })
       localStorage.setItem('token', response.token);
       setUser(response.user);

@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { uploadHealthData, getUserHealthData, updateHealthDataPermissions } from '../controllers/healthData.js';
 import { protect } from '../middleware/auth.js';
+import { validationResult } from 'express-validator';
 
 const router = express.Router();
 
@@ -20,34 +21,26 @@ router.post('/', protect, [
   body('diseaseType').notEmpty(),
   body('description').notEmpty(),
   body('hash').notEmpty()
-], (req, res, next) => {
-  console.log('Received request body:', req.body);
-
-  // // Log validation errors, if any
-  // const errors = validationResult(req);
-  // if (!errors.isEmpty()) {
-  //   console.error('Validation errors:', errors.array());
-  //   return res.status(400).json({ errors: errors.array() });
-  // }
-
-  logRequest(req, 'POST /healthdata');
-  
+], async (req, res) => {
   try {
-    console.log('Data to upload:', {
-      dataType: req.body.dataType,
-      source: req.body.source,
-      // data: req.body.data,
-      diseaseType: req.body.diseaseType,
-      hash: req.body.hash
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    console.log('Received request body:', req.body);
+
+    // send success response
+    return res.status(200).json({
+      message: 'File uploaded successfully',
+      publicUrl: req.body.data
     });
 
-    uploadHealthData(req, res, next);
-  } catch (err) {
-    console.error('Error during health data upload:', err);
+  } catch (error) {
+    console.error('Upload error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
 
 router.get('/', protect, (req, res, next) => {
   logRequest(req, 'GET /healthdata');

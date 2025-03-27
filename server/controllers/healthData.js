@@ -14,12 +14,11 @@ export const uploadHealthData = async (req, res) => {
       user: req.user._id,
       dataType,
       source,
-      // data,
+      data,
       diseaseType,
       description,
       encryption,
       hash,
-      smartContractId
     });
 
     res.status(201).json(healthData);

@@ -322,7 +322,14 @@ const DataRequestModal: React.FC<DataRequestModalProps> = ({
             </div>
           </div> */}
 
-         
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Info className="h-5 w-5 text-blue-400" />
+              </div>
+              
+            </div>
+          </div>
 
           <div className={`flex items-start ${formErrors.agreeToTerms ? 'border border-red-300 rounded-md p-2' : ''}`}>
             <div className="flex items-center h-5">

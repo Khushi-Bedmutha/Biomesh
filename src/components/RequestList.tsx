@@ -4,7 +4,7 @@ import { DataRequest } from "../types";
 import DataRequestModal from "./DataRequestModal";
 import { useNavigate } from "react-router-dom";
 
-const requests: DataRequest[] = [
+const initialRequests: DataRequest[] = [
   {
     id: "1",
     title: "Brain MRI Data",
@@ -56,9 +56,11 @@ const statusColors = {
 };
 
 export default function RequestList() {
+  const [requests, setRequests] = useState<DataRequest[]>(initialRequests);
   const [selectedRequest, setSelectedRequest] = useState<DataRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
+
   const handleOpenModal = (request: DataRequest) => {
     setSelectedRequest(request);
     setIsModalOpen(true);
@@ -74,10 +76,15 @@ export default function RequestList() {
     status: "approved" | "rejected",
     reason?: string
   ) => {
-    console.log(
-      `Changing request ${requestId} status to ${status}${reason ? ` with reason: ${reason}` : ""}`
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === requestId ? { ...req, status } : req
+      )
     );
-    // API call can go here
+
+    
+
+    handleCloseModal();
   };
 
   return (
@@ -85,24 +92,27 @@ export default function RequestList() {
       <h2 className="text-lg font-semibold mb-4">Data Requests</h2>
 
       <div className="space-y-3">
-        {requests.map((request) => {
-          const StatusIcon = statusIcons[request.status as keyof typeof statusIcons];
-          const statusColor = statusColors[request.status as keyof typeof statusColors];
+        {requests
+          .filter((req) => req.status !== "approved")
+          .map((request) => {
+            const StatusIcon = statusIcons[request.status];
+            const statusColor = statusColors[request.status];
 
-          return (
-            <div
-              key={request.id}
-              onClick={() => handleOpenModal(request)}
-              className={`flex justify-between items-center p-4 border rounded-lg cursor-pointer transition-colors border-white-200 dark:border-gray-700 hover:bg-white-50 dark:hover:bg-white-700`}
-            >
-              <div className="flex items-center gap-3">
-                <StatusIcon className={`w-5 h-5 ${statusColor}`} />
-                <span className="font-medium">{request.title}</span>
+            return (
+              <div
+                key={request.id}
+                onClick={() => handleOpenModal(request)}
+                className="flex justify-between items-center p-4 border rounded-lg cursor-pointer transition-colors border-white-200 dark:border-gray-700 hover:bg-white-50 dark:hover:bg-white-700"
+              >
+                <div className="flex items-center gap-3">
+                  <StatusIcon className={`w-5 h-5 ${statusColor}`} />
+                  <span className="font-medium">{request.title}</span>
+                </div>
+                <span className="text-sm text-gray-500">{request.date}</span>
               </div>
-              <span className="text-sm text-gray-500">{request.date}</span>
-            </div>
-          );
-        })}
+            );
+          })}
+
         <div className="flex flex-col items-center">
           <button
             onClick={() => navigate("/manage-requests")}
@@ -111,7 +121,6 @@ export default function RequestList() {
             Manage Requests
           </button>
         </div>
-
       </div>
 
       <DataRequestModal

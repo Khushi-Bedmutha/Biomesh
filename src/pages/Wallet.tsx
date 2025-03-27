@@ -46,15 +46,41 @@ const Wallet = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
-        // Fetch wallet balance
-        const balance = await walletApi.getBalance();
+  
+        // Mock balance
+        const balance = 1234.56;
         setWalletBalance(balance);
-        
-        // Fetch transactions
-        const userTransactions = await transactionsApi.getAll();
+  
+        // Mock transactions
+        const userTransactions: Transaction[] = [
+          {
+            _id: 'txn1',
+            type: 'credit',
+            amount: 500,
+            description: 'Reward for referral',
+            status: 'completed',
+            createdAt: new Date().toISOString()
+          },
+          {
+            _id: 'txn2',
+            type: 'debit',
+            amount: 200,
+            description: 'Withdrawal to USDT',
+            status: 'processing',
+            createdAt: new Date(Date.now() - 86400000).toISOString()
+          },
+          {
+            _id: 'txn3',
+            type: 'credit',
+            amount: 1000,
+            description: 'Airdrop Bonus',
+            status: 'completed',
+            createdAt: new Date(Date.now() - 2 * 86400000).toISOString()
+          }
+        ];
+  
         setTransactions(userTransactions);
-        
+  
         setError(null);
       } catch (err) {
         console.error('Error fetching wallet data:', err);
@@ -63,10 +89,10 @@ const Wallet = () => {
         setIsLoading(false);
       }
     };
-    
+  
     fetchData();
   }, []);
-
+  
   const handleWithdraw = async () => {
     if (!selectedWithdrawMethod || !withdrawAmount) {
       toast.error('Please select a withdrawal method and enter an amount');

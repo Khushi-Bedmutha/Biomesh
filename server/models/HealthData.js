@@ -42,7 +42,6 @@ const healthDataSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  smartContractId: String
 }, {
   timestamps: true
 });
