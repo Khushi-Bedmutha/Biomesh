@@ -85,7 +85,7 @@ Contributions to Biomesh are welcome. To contribute:
 3. Commit your changes with descriptive messages.
 4. Push your branch and create a pull request.
 
-##Screenshots
+Screenshots
 
 ![image](https://github.com/user-attachments/assets/49618bab-e7aa-4173-ab40-1cd80f364c74)
 ![image](https://github.com/user-attachments/assets/2d58b220-5203-4991-abe0-7d8026b9b2b7)
