@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 const Login = () => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -18,7 +19,7 @@ const Login = () => {
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6 }
+    transition: { duration: 0.6 },
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,6 +27,21 @@ const Login = () => {
     setError('');
     setLoading(true);
 
+    // ✅ Temporary frontend-only login bypass
+    if (formData.email === 'test@test.com' && formData.password === 'password123') {
+      const mockUser = {
+        name: 'Test User',
+        email: 'test@test.com',
+        role: 'tester',
+      };
+      localStorage.setItem('token', 'fake-token-123');
+      setUser(mockUser);
+      navigate('/dashboard');
+      setLoading(false);
+      return;
+    }
+
+    // Normal backend login flow
     try {
       const response = await login(formData);
       localStorage.setItem('token', response.token);
@@ -42,13 +58,13 @@ const Login = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-      <motion.div 
+      <motion.div
         className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl shadow-xl"
         initial="initial"
         animate="animate"
@@ -58,9 +74,7 @@ const Login = () => {
           <div className="flex justify-center">
             <Brain className="h-12 w-12 text-blue-600" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Welcome back
-          </h2>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Welcome back</h2>
           <p className="mt-2 text-sm text-gray-600">
             Continue your journey in advancing medical research
           </p>
@@ -72,7 +86,7 @@ const Login = () => {
               {error}
             </div>
           )}
-          
+
           <div className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
